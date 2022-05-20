@@ -1,4 +1,7 @@
 import sys
+import numpy as np
+from PIL import Image
+from PIL.ImageQt import ImageQt
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -35,9 +38,17 @@ from constants import (
 
 class Picture(QLabel):
 
-    def __init__(self, parent, path):
-        super().__init__(parent)
-        self._pixmap = QPixmap(path)
+    def __init__(self, *args):
+        # args[0] - parent
+        # args[1] - path or PIL.Image
+
+        super().__init__(args[0])
+
+        if isinstance(args[1], str):
+            self._pixmap = QPixmap(args[1])
+        else:
+            self._qim = ImageQt(args[1].convert('RGB'))
+            self._pixmap = QPixmap.fromImage(self._qim)
         self.setPixmap(self._pixmap)
         self.setMouseTracking(True)
 
@@ -69,8 +80,8 @@ class PicturesFrame(QFrame):
         self.persistent_scale_array = [1]
         self.scale_index = 0
 
-    def addPicture(self, path):
-        self.pics.append(Picture(self, path))
+    def addPicture(self, *args):
+        self.pics.append(Picture(self, *args))
         self.pics[-1].move(*self.pos)
         self.pics[-1].show()
 
@@ -214,6 +225,8 @@ class CentralWidget(QWidget):
 
     def initUI(self):
 
+        self.pil_image_pictures = []
+
         self.makeAlgorithmsPanel()
         self.makePicturesListPanel()
         self.makeBottomPanel()
@@ -271,11 +284,18 @@ class CentralWidget(QWidget):
         h3 = QHBoxLayout()
         l3 = QLabel()
         l3.setText("Algorithm")
-        self.pictures_combobox3 = QComboBox()
+        self.algorithms_combobox = QComboBox()
         for algorithm_name in algorithms.keys():
-            self.pictures_combobox3.addItem(algorithm_name)
+            self.algorithms_combobox.addItem(algorithm_name)
         h3.addWidget(l3)
-        h3.addWidget(self.pictures_combobox3)
+        h3.addWidget(self.algorithms_combobox)
+
+        h4 = QHBoxLayout()
+        l4 = QLabel()
+        l4.setText('Name of the result picture')
+        self.algorithm_result_picture_name_line = QLineEdit()
+        h4.addWidget(l4)
+        h4.addWidget(self.algorithm_result_picture_name_line)
 
         self.btn_apply_algorithm = QPushButton('Apply algorithm')
         self.btn_apply_algorithm.clicked.connect(self.applyAlgorithm)
@@ -284,6 +304,7 @@ class CentralWidget(QWidget):
         vbox.addLayout(h1)
         vbox.addLayout(h2)
         vbox.addLayout(h3)
+        vbox.addLayout(h4)
         vbox.addWidget(self.btn_apply_algorithm)
 
         self.algorithms_panel = QGroupBox('Change detection algorithms')
@@ -354,6 +375,8 @@ class CentralWidget(QWidget):
         if path:
             self.pic_frame.addPicture(path)
 
+            self.pil_image_pictures.append(Image.open(path))
+
             pic_name = path.split('/')[-1]
 
             item = QListWidgetItem()
@@ -366,7 +389,22 @@ class CentralWidget(QWidget):
             self.pictures_combobox2.addItem(pic_name)
 
     def showSavePictureDialog(self):
-        pass
+        if self.pictures_list.selectedItems():
+            path = QFileDialog.getSaveFileName(self, 'Save file')[0]
+
+            if path:
+                for index in range(self.pictures_list.count()):
+                    if self.pictures_list.item(index).isSelected():
+                        try:
+                            self.pil_image_pictures[index].convert('RGB').save(path)
+                        except ValueError:
+                            QMessageBox(
+                                QMessageBox.Warning,
+                                'Wrong format of filename!',
+                                'Cannot save file because input filename is wrong.\nTry again.',
+                                QMessageBox.Ok
+                            ).exec_()
+                        break
 
     def picturesListItemChanged(self):
         for index in range(self.pictures_list.count()):
@@ -395,6 +433,11 @@ class CentralWidget(QWidget):
                 self.pictures_combobox2.removeItem(index)
 
                 self.pic_frame.deletePicture(index)
+
+                self.pil_image_pictures.pop(index)
+
+                self.pictures_list.unselectPicturesListItems()
+                break
 
     def scaleLineEditChangedByUser(self):
         text = self.bottom_scale_line.text()
@@ -435,10 +478,28 @@ class CentralWidget(QWidget):
     def applyAlgorithm(self):
         pic1_index = self.pictures_combobox1.currentIndex()
         pic2_index = self.pictures_combobox2.currentIndex()
-        algorithm_name = self.pictures_combobox3.currentText()
+        algorithm_name = self.algorithms_combobox.currentText()
+        result_picture_name = self.algorithm_result_picture_name_line.text()
 
-        print(pic1_index, pic2_index)
-        algorithms[algorithm_name]()
+        if pic1_index >= 0 and pic2_index >= 0 and algorithm_name and result_picture_name:
+            # some stuff
+            # algorithms[algorithm_name]()
+            # some stuff
+            res_im = Image.fromarray(np.random.randint(255, size=(300, 300)))
+
+            # here final code is begun
+            self.pil_image_pictures.append(res_im)
+
+            self.pic_frame.addPicture(res_im)
+
+            item = QListWidgetItem()
+            item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsDragEnabled | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            item.setText(result_picture_name)
+            item.setCheckState(Qt.Checked)
+            self.pictures_list.addItem(item)
+
+            self.pictures_combobox1.addItem(result_picture_name)
+            self.pictures_combobox2.addItem(result_picture_name)
 
 
 class MainWindow(QMainWindow):
