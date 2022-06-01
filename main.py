@@ -55,6 +55,16 @@ class Picture(QLabel):
     def resizeEvent(self, e):
         self.setPixmap(self._pixmap.scaled(self.width(), self.height(), Qt.KeepAspectRatio))
 
+    def toArray(self):
+        image = self._pixmap.toImage()
+        width = image.width()
+        height = image.height()
+
+        ptr = image.bits()
+        ptr.setsize(height * width * 4)
+        arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
+        return arr[:,:,:3]
+
 
 class PicturesFrame(QFrame):
 
@@ -482,10 +492,12 @@ class CentralWidget(QWidget):
         result_picture_name = self.algorithm_result_picture_name_line.text()
 
         if pic1_index >= 0 and pic2_index >= 0 and algorithm_name and result_picture_name:
-            # some stuff
-            # algorithms[algorithm_name]()
-            # some stuff
-            res_im = Image.fromarray(np.random.randint(255, size=(300, 300)))
+            result = algorithms[algorithm_name](
+                self.pic_frame.pics[pic1_index].toArray(),
+                self.pic_frame.pics[pic2_index].toArray(),
+            )
+            res_im = Image.fromarray(result)
+            res_im = res_im.resize((512, 512), Image.NEAREST)
 
             # here final code is begun
             self.pil_image_pictures.append(res_im)
