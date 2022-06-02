@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import Qt, pyqtSignal
-from algorithms import algorithms
+from algorithms import algorithms, performAlgorithm
 from constants import (
     ZOOM_MIN,
     ZOOM_MAX,
@@ -55,15 +55,6 @@ class Picture(QLabel):
     def resizeEvent(self, e):
         self.setPixmap(self._pixmap.scaled(self.width(), self.height(), Qt.KeepAspectRatio))
 
-    def toArray(self):
-        image = self._pixmap.toImage()
-        width = image.width()
-        height = image.height()
-
-        ptr = image.bits()
-        ptr.setsize(height * width * 4)
-        arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
-        return arr[:,:,:3]
 
 
 class PicturesFrame(QFrame):
@@ -492,12 +483,12 @@ class CentralWidget(QWidget):
         result_picture_name = self.algorithm_result_picture_name_line.text()
 
         if pic1_index >= 0 and pic2_index >= 0 and algorithm_name and result_picture_name:
-            result = algorithms[algorithm_name](
-                self.pic_frame.pics[pic1_index].toArray(),
-                self.pic_frame.pics[pic2_index].toArray(),
+            current_algo = algorithms[algorithm_name]
+            res_im = performAlgorithm(
+                current_algo,
+                self.pil_image_pictures[pic1_index],
+                self.pil_image_pictures[pic2_index],
             )
-            res_im = Image.fromarray(result)
-            res_im = res_im.resize((512, 512), Image.NEAREST)
 
             # here final code is begun
             self.pil_image_pictures.append(res_im)
