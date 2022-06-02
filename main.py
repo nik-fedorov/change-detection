@@ -56,7 +56,6 @@ class Picture(QLabel):
         self.setPixmap(self._pixmap.scaled(self.width(), self.height(), Qt.KeepAspectRatio))
 
 
-
 class PicturesFrame(QFrame):
 
     cursorCoordsChanged = pyqtSignal(float, float)
@@ -490,7 +489,6 @@ class CentralWidget(QWidget):
                 self.pil_image_pictures[pic2_index],
             )
 
-            # here final code is begun
             self.pil_image_pictures.append(res_im)
 
             self.pic_frame.addPicture(res_im)
